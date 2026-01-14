@@ -1,9 +1,6 @@
 """
 Intersection Model with Multi-Agent Support
 ============================================
-
-Refactored to use Strategy pattern for mechanisms.
-Each mechanism (FCFS, Auction, Negotiation) is a separate module.
 """
 import random
 from typing import Optional, List, Dict
@@ -15,30 +12,20 @@ from constants import (
     DIRECTION_AXIS, Mechanism
 )
 from vehicle import Vehicle
-from mechanisms import create_mechanism, NegotiationType
+# AJOUT DE AuctionType DANS L'IMPORT
+from mechanisms import create_mechanism, NegotiationType, AuctionType
 from debug import logger
 
 
 class SimpleIntersection:
     """
     Intersection simulation with pluggable selection mechanisms.
-    
-    The mechanism determines how vehicles are prioritized:
-    - FCFS: First arrival gets priority
-    - Auction: Highest bidder gets priority
-    - Negotiation: Vehicles negotiate for priority
-    
-    Flow:
-    1. Vehicles spawn in parking zones
-    2. Move to barrier queue
-    3. Mechanism selects who enters corridor
-    4. Vehicles move through corridor
-    5. At intersection, mechanism resolves conflicts
-    6. Vehicles exit grid
     """
     
     def __init__(self, mechanism: Mechanism = Mechanism.FCFS,
                  negotiation_type: NegotiationType = NegotiationType.STOCHASTIC,
+                 # AJOUT DU PARAMÈTRE AUCTION_TYPE
+                 auction_type: AuctionType = AuctionType.VICKREY,
                  spawn_rate: float = 0.1, urgent_probability: float = 0.05,
                  seed: int = None):
         if seed:
@@ -50,8 +37,10 @@ class SimpleIntersection:
         self.step_count = 0
         self.vehicle_counter = 0
         
-        # Create mechanism using factory
-        self.mechanism = create_mechanism(mechanism, negotiation_type=negotiation_type)
+        # Create mechanism using factory WITH AUCTION TYPE
+        self.mechanism = create_mechanism(mechanism, 
+                                        negotiation_type=negotiation_type,
+                                        auction_type=auction_type)
         
         # Vehicle storage
         self.parking_zones: Dict[str, List[Vehicle]] = {
@@ -78,8 +67,13 @@ class SimpleIntersection:
         }
         
         logger.clear()
-        logger.log('state', f"Simulation started: {mechanism.value}", {})
+        # Log the specific name of the mechanism (e.g. "Auction (English)")
+        logger.log('state', f"Simulation started: {self.mechanism.name}", {})
     
+    # ... LE RESTE DE LA CLASSE RESTE INCHANGÉ ...
+    # (Copiez ici le reste des méthodes spawn_vehicle, move_parking_to_barrier, etc.
+    #  depuis votre version précédente corrigée)
+
     # =========================================================================
     # SPAWNING
     # =========================================================================
@@ -216,118 +210,140 @@ class SimpleIntersection:
                 )
     
     # =========================================================================
-    # CORRIDOR MOVEMENT & CONFLICT ZONE
+    # CORRIDOR MOVEMENT & CONFLICT ZONE (CORRECTED)
     # =========================================================================
     def move_corridor_vehicles(self):
         """Move vehicles in corridor and handle conflict zone"""
         exited_ids = []
         
-        # Step 1: Find vehicles at waiting positions
-        waiting = [v for v in self.corridor_vehicles.values() 
-                   if v.pos in WAITING_POSITIONS.values()]
+        # Step 1: Identify vehicles waiting at THEIR SPECIFIC intersection line
+        waiting = []
+        for v in self.corridor_vehicles.values():
+            # Check strictly against the waiting position for THIS vehicle's direction
+            if (v.pos == WAITING_POSITIONS[v.direction] and 
+                v.state != VehicleState.IN_CONFLICT):
+                waiting.append(v)
         
-        # Step 2: Handle conflict zone entry
+        # Step 2: Handle conflict resolution if the zone is free
         conflict_winner = None
         
-        if self.conflict_zone_vehicle is None and len(waiting) >= 2:
-            # Multiple vehicles - use mechanism to resolve
-            context = {'current_step': self.step_count, 'location': 'conflict'}
-            result = self.mechanism.select_at_conflict(waiting, context)
-            if result:
-                conflict_winner = result.winner
-                
-                # Log détaillé selon le mécanisme
-                method = result.details.get('method', 'unknown')
-                
-                if 'Marginal Utility' in method or 'negotiation' in method.lower():
-                    # Log détaillé pour négociation multi-rounds
-                    loser = waiting[1] if conflict_winner.id == waiting[0].id else waiting[0]
-                    logger.log_negotiation(
-                        winner_id=conflict_winner.id,
-                        loser_id=loser.id,
-                        method=method,
-                        details=result.details
-                    )
-                elif 'auction' in method.lower():
-                    # Log pour enchères
-                    logger.log_auction(
-                        axis='conflict',
-                        winner_id=conflict_winner.id,
-                        winner_urgency=conflict_winner.urgency,
-                        winning_bid=result.details.get('winning_bid', 0),
-                        price_paid=result.details.get('price_paid', 0),
-                        num_bidders=len(waiting),
-                        all_bids=result.details.get('all_bids', {}),
-                        auction_type=method.replace('_auction', ''),
-                        total_rounds=result.details.get('total_rounds', 1)
-                    )
-                else:
-                    # Log standard
-                    logger.log('negotiation', 
-                              f"CONFLICT: V{waiting[0].id} vs V{waiting[1].id} → V{conflict_winner.id} WINS",
-                              {'method': method})
-        elif self.conflict_zone_vehicle is None and len(waiting) == 1:
-            conflict_winner = waiting[0]
+        if self.conflict_zone_vehicle is None:
+            if len(waiting) >= 2:
+                # Multiple vehicles - use mechanism to resolve
+                context = {'current_step': self.step_count, 'location': 'conflict'}
+                result = self.mechanism.select_at_conflict(waiting, context)
+                if result:
+                    conflict_winner = result.winner
+                    self._log_conflict_resolution(result, waiting)
+            elif len(waiting) == 1:
+                # Single vehicle - automatic winner
+                conflict_winner = waiting[0]
         
         # Step 3: Move vehicles
         for vehicle in list(self.corridor_vehicles.values()):
-            next_pos = vehicle.get_next_position()
             current_pos = vehicle.pos
             
-            # At waiting position
-            if current_pos in WAITING_POSITIONS.values():
+            # --- Logic for vehicles at Waiting Position ---
+            if current_pos == WAITING_POSITIONS[vehicle.direction]:
+                # If this vehicle is already crossing (won previously), just move
+                if vehicle.state == VehicleState.IN_CONFLICT:
+                    self._move_vehicle_safely(vehicle, exited_ids)
+                    continue
+                
+                # If someone else is in the zone -> Wait
                 if self.conflict_zone_vehicle is not None:
-                    # Someone in conflict zone - WAIT
                     self.stats['collisions_avoided'] += 1
                     continue
-                elif conflict_winner and vehicle.id != conflict_winner.id:
-                    # Lost negotiation - WAIT
-                    self.stats['collisions_avoided'] += 1
-                    continue
-                else:
-                    # Can enter conflict zone
+                
+                # If this vehicle is the winner of this turn -> Enter
+                if conflict_winner and vehicle.id == conflict_winner.id:
                     self.conflict_zone_vehicle = vehicle.id
                     vehicle.state = VehicleState.IN_CONFLICT
-                    vehicle.move()
+                    self._move_vehicle_safely(vehicle, exited_ids)
                     logger.log_enter_conflict_zone(
                         vehicle.id, vehicle.direction, vehicle.urgency
                     )
                     continue
+                
+                # Otherwise -> Lost conflict, Wait
+                self.stats['collisions_avoided'] += 1
+                continue
             
-            # Exiting conflict zone
+            # --- Logic for vehicles exiting Conflict Zone ---
             if current_pos == INTERSECTION_POS:
+                # Vehicle moves out of intersection
+                self._move_vehicle_safely(vehicle, exited_ids)
+                
+                # Free the zone AFTER the move
                 self.conflict_zone_vehicle = None
                 vehicle.state = VehicleState.IN_CORRIDOR
                 logger.log_exit_conflict_zone(vehicle.id, vehicle.direction)
+                continue
             
-            # Normal movement
-            vehicle.move()
-            
-            # Check exit
-            if vehicle.has_exited():
-                vehicle.exit_time = self.step_count
-                total_time = vehicle.exit_time - vehicle.arrival_time
-                wait_time = (vehicle.entry_time - vehicle.arrival_time 
-                            if vehicle.entry_time else 0)
-                
-                self.corridor_reserved[vehicle.axis] = None
-                if self.conflict_zone_vehicle == vehicle.id:
-                    self.conflict_zone_vehicle = None
-                
-                self.exited_vehicles.append(vehicle)
-                exited_ids.append(vehicle.id)
-                self.stats['total_crossed'] += 1
-                if vehicle.is_urgent():
-                    self.stats['urgent_crossed'] += 1
-                
-                logger.log_exit_grid(
-                    vehicle.id, vehicle.direction, total_time, wait_time
-                )
+            # --- Normal Movement ---
+            self._move_vehicle_safely(vehicle, exited_ids)
         
         # Clean up exited vehicles
         for vid in exited_ids:
             del self.corridor_vehicles[vid]
-    
+
+    def _move_vehicle_safely(self, vehicle: Vehicle, exited_ids: List[int]):
+        """Helper to move vehicle and check exit conditions"""
+        vehicle.move()
+        
+        if vehicle.has_exited():
+            vehicle.exit_time = self.step_count
+            total_time = vehicle.exit_time - vehicle.arrival_time
+            wait_time = (vehicle.entry_time - vehicle.arrival_time 
+                        if vehicle.entry_time else 0)
+            
+            self.corridor_reserved[vehicle.axis] = None
+            
+            # Double check to free conflict zone if vehicle exited directly from it
+            if self.conflict_zone_vehicle == vehicle.id:
+                self.conflict_zone_vehicle = None
+            
+            self.exited_vehicles.append(vehicle)
+            exited_ids.append(vehicle.id)
+            self.stats['total_crossed'] += 1
+            if vehicle.is_urgent():
+                self.stats['urgent_crossed'] += 1
+            
+            logger.log_exit_grid(
+                vehicle.id, vehicle.direction, total_time, wait_time
+            )
+
+    def _log_conflict_resolution(self, result, waiting):
+        """Helper for logging detailed conflict info"""
+        method = result.details.get('method', 'unknown')
+        conflict_winner = result.winner
+        
+        if 'Marginal Utility' in method or 'negotiation' in method.lower():
+            loser = waiting[1] if conflict_winner.id == waiting[0].id else waiting[0]
+            logger.log_negotiation(
+                winner_id=conflict_winner.id,
+                loser_id=loser.id,
+                method=method,
+                details=result.details
+            )
+        elif 'auction' in method.lower():
+            logger.log_auction(
+                axis='conflict',
+                winner_id=conflict_winner.id,
+                winner_urgency=conflict_winner.urgency,
+                winning_bid=result.details.get('winning_bid', 0),
+                price_paid=result.details.get('price_paid', 0),
+                num_bidders=len(waiting),
+                all_bids=result.details.get('all_bids', {}),
+                auction_type=method.replace('_auction', ''),
+                total_rounds=result.details.get('total_rounds', 1)
+            )
+        else:
+            # FCFS Log
+            logger.log('negotiation', 
+                      f"CONFLICT: V{waiting[0].id} vs V{waiting[1].id} → V{conflict_winner.id} WINS",
+                      {'method': method})
+
     # =========================================================================
     # MAIN STEP
     # =========================================================================
@@ -345,26 +361,19 @@ class SimpleIntersection:
         self.move_corridor_vehicles()
     
     # =========================================================================
-    # GETTERS
+    # GETTERS (UNCHANGED)
     # =========================================================================
     def get_all_vehicles_positions(self) -> List[Dict]:
         """Get positions of all vehicles for visualization"""
         result = []
-        
-        # Parking zones
         for direction, vehicles in self.parking_zones.items():
             for i, v in enumerate(vehicles):
                 result.append(self._vehicle_to_dict(v, 'parking', i))
-        
-        # Barrier queues
         for direction, queue in self.barrier_queues.items():
             for i, v in enumerate(queue):
                 result.append(self._vehicle_to_dict(v, 'barrier', i))
-        
-        # Corridor vehicles
         for v in self.corridor_vehicles.values():
             is_waiting = v.pos in WAITING_POSITIONS.values()
-            
             if v.state == VehicleState.IN_CONFLICT:
                 state = 'conflict'
             elif is_waiting:
@@ -373,14 +382,11 @@ class SimpleIntersection:
                 state = 'negotiating'
             else:
                 state = 'corridor'
-            
             result.append(self._vehicle_to_dict(v, state, None, is_waiting))
-        
         return result
     
     def _vehicle_to_dict(self, v: Vehicle, state: str, queue_pos: int = None,
                          waiting_at_intersection: bool = False) -> Dict:
-        """Convert vehicle to dictionary for visualization"""
         return {
             'id': v.id,
             'direction': v.direction,
@@ -402,7 +408,6 @@ class SimpleIntersection:
             avg_wait = self.stats['total_wait_time'] / self.stats['total_crossed']
         
         mech_stats = self.mechanism.get_stats()
-        
         waiting_count = sum(1 for v in self.corridor_vehicles.values() 
                            if v.pos in WAITING_POSITIONS.values())
         
@@ -423,45 +428,30 @@ class SimpleIntersection:
             'collisions_avoided': self.stats['collisions_avoided'],
         }
         
-        # Add mechanism-specific stats
         if hasattr(self.mechanism, 'stats'):
-            result['auctions_held'] = mech_stats.get('auctions_held', 0)
-            result['negotiations_held'] = mech_stats.get('negotiations_held', 0)
-            result['total_revenue'] = mech_stats.get('total_revenue', 0)
-            result['avg_price'] = mech_stats.get('avg_price', 0)
-            # Stats détaillées de négociation
-            result['total_rounds'] = mech_stats.get('total_rounds', 0)
-            result['avg_rounds'] = mech_stats.get('avg_rounds', 0)
-            result['total_messages'] = mech_stats.get('total_messages', 0)
-            result['yields'] = mech_stats.get('yields', 0)
-            result['close_negotiations'] = mech_stats.get('close_negotiations', 0)
+            result.update(mech_stats)
         
-        # For negotiation, add method
         if hasattr(self.mechanism, 'method'):
             result['negotiation_method'] = self.mechanism.method.value
         
         return result
     
     def get_last_auction(self) -> Optional[Dict]:
-        """Get last auction result if mechanism is Auction"""
         if hasattr(self.mechanism, 'get_last_auction'):
             return self.mechanism.get_last_auction()
         return None
     
     def get_last_negotiation(self) -> Optional[Dict]:
-        """Get last negotiation result if mechanism is Negotiation"""
         if hasattr(self.mechanism, 'get_last_negotiation'):
             return self.mechanism.get_last_negotiation()
         return None
     
     def get_negotiation_stats(self) -> Dict:
-        """Get negotiation statistics"""
         if hasattr(self.mechanism, 'get_negotiation_stats'):
             return self.mechanism.get_negotiation_stats()
         return {}
     
     def reset(self):
-        """Reset simulation to initial state"""
         self.step_count = 0
         self.vehicle_counter = 0
         for p in self.parking_zones.values():

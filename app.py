@@ -105,18 +105,23 @@ def reset_simulation():
     
     current_mechanism = mech_map.get(mechanism_choice.value, Mechanism.FCFS)
     
+    # DÉTERMINER LE TYPE D'ENCHÈRE AVANT LA CRÉATION
+    from mechanisms import AuctionType
+    auc_type = AuctionType.VICKREY
+    if current_mechanism == Mechanism.AUCTION:
+        if auction_type_choice.value == "ENGLISH":
+            auc_type = AuctionType.ENGLISH
+        else:
+            auc_type = AuctionType.VICKREY
+
+    # PASSER LE TYPE AU CONSTRUCTEUR
     model = SimpleIntersection(
         mechanism=current_mechanism,
         spawn_rate=spawn_rate_value.value,
         urgent_probability=0.15,
+        auction_type=auc_type,
         seed=42
     )
-    
-    # Si c'est une enchère, configurer le type (English ou Vickrey)
-    if current_mechanism == Mechanism.AUCTION:
-        from mechanisms import AuctionType
-        auction_type = AuctionType.VICKREY if auction_type_choice.value == "VICKREY" else AuctionType.ENGLISH
-        model.mechanism.set_auction_type(auction_type)
     
     tick.set(0)
 

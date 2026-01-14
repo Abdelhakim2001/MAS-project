@@ -1,9 +1,9 @@
 ======================================================================
 INTERSECTION SIMULATION DEBUG LOG
-Started: 2026-01-14 12:57:29
+Started: 2026-01-14 19:20:48
 ======================================================================
 
-[0013] 📊 Simulation started: Auction (Vickrey)
+[0007] 📊 Simulation started: Auction (Vickrey)
 [0001] 🚗 V1 spawned (S, urg=4) | {'vehicle_id': 1, 'direction': 'S', 'urgency': 4}
 [0001] ➡️ V1 → BARRIER (S) | {'vehicle_id': 1, 'direction': 'S'}
 [0001] ➡️ V1 → North-South corridor (Auction (Vickrey)) | {'vehicle_id': 1, 'direction': 'S', 'axis': 'North-South', 'mechanism': 'Auction (Vickrey)'}
@@ -17,50 +17,88 @@ Started: 2026-01-14 12:57:29
 [0004] ✅ V1 ← conflict zone | {'vehicle_id': 1, 'direction': 'S'}
 [0005] 🚗 V5 spawned (N, urg=6) | {'vehicle_id': 5, 'direction': 'N', 'urgency': 6}
 [0005] ➡️ V5 → BARRIER (N) | {'vehicle_id': 5, 'direction': 'N'}
-[0005] ⚠️ V1 → CONFLICT ZONE (urg=4) | {'vehicle_id': 1, 'direction': 'S', 'urgency': 4}
 [0008] 🚗 V6 spawned (S, urg=5) | {'vehicle_id': 6, 'direction': 'S', 'urgency': 5}
 [0008] ➡️ V6 → BARRIER (S) | {'vehicle_id': 6, 'direction': 'S'}
 
 --- STEP 10 ---
+[0011] 🚗 V7 spawned (N, urg=9) | {'vehicle_id': 7, 'direction': 'N', 'urgency': 9}
 [0011] 🏁 V1 EXITED (total=10, wait=0) | {'vehicle_id': 1, 'direction': 'S', 'total_time': 10, 'wait_time': 0}
 [0012] ➡️ V3 → North-South corridor (Auction (Vickrey)) | {'vehicle_id': 3, 'direction': 'N', 'axis': 'North-South', 'mechanism': 'Auction (Vickrey)'}
 [0012] 🔨 AUCTION (VICKREY) North-South: V3 WINS (bid=1009, paid=70, rounds=1) | V3(b=1009), V4(b=70), V5(b=60), V6(b=50), V2(b=10) | {'axis': 'North-South', 'winner_id': 3, 'winning_bid': 1009, 'price_paid': 70, 'num_bidders': 5, 'auction_type': 'vickrey', 'total_rounds': 1}
-[0014] 🚗 V7 spawned (N, urg=5) | {'vehicle_id': 7, 'direction': 'N', 'urgency': 5}
-[0014] ➡️ V7 → BARRIER (N) | {'vehicle_id': 7, 'direction': 'N'}
+[0013] 🚗 V8 spawned (N, urg=6) | {'vehicle_id': 8, 'direction': 'N', 'urgency': 6}
+[0013] ➡️ V7 → BARRIER (N) | {'vehicle_id': 7, 'direction': 'N'}
 [0014] ⚠️ V3 → CONFLICT ZONE (urg=9) | {'vehicle_id': 3, 'direction': 'N', 'urgency': 9}
 [0015] ✅ V3 ← conflict zone | {'vehicle_id': 3, 'direction': 'N'}
-[0016] ⚠️ V3 → CONFLICT ZONE (urg=9) | {'vehicle_id': 3, 'direction': 'N', 'urgency': 9}
-[0018] 🚗 V8 spawned (S, urg=1) | {'vehicle_id': 8, 'direction': 'S', 'urgency': 1}
-[0018] ➡️ V8 → BARRIER (S) | {'vehicle_id': 8, 'direction': 'S'}
+[0018] 🚗 V9 spawned (N, urg=10) | {'vehicle_id': 9, 'direction': 'N', 'urgency': 10}
 
 --- STEP 20 ---
-[0021] 🚗 V9 spawned (S, urg=5) | {'vehicle_id': 9, 'direction': 'S', 'urgency': 5}
-[0021] 🚗 V10 spawned (E, urg=8) | {'vehicle_id': 10, 'direction': 'E', 'urgency': 8}
-[0021] ➡️ V10 → BARRIER (E) | {'vehicle_id': 10, 'direction': 'E'}
-[0021] ➡️ V10 → East-West corridor (Auction (Vickrey)) | {'vehicle_id': 10, 'direction': 'E', 'axis': 'East-West', 'mechanism': 'Auction (Vickrey)'}
+[0021] 🚗 V10 spawned (N, urg=5) | {'vehicle_id': 10, 'direction': 'N', 'urgency': 5}
+[0021] 🚗 V11 spawned (S, urg=8) | {'vehicle_id': 11, 'direction': 'S', 'urgency': 8}
+[0021] ➡️ V11 → BARRIER (S) | {'vehicle_id': 11, 'direction': 'S'}
 [0022] 🏁 V3 EXITED (total=19, wait=9) | {'vehicle_id': 3, 'direction': 'N', 'total_time': 19, 'wait_time': 9}
-[0023] ➡️ V4 → North-South corridor (Auction (Vickrey)) | {'vehicle_id': 4, 'direction': 'N', 'axis': 'North-South', 'mechanism': 'Auction (Vickrey)'}
-[0023] 🔨 AUCTION (VICKREY) North-South: V4 WINS (bid=70, paid=60, rounds=1) | V4(b=70), V5(b=60), V7(b=50), V6(b=50), V2(b=10), V8(b=10) | {'axis': 'North-South', 'winner_id': 4, 'winning_bid': 70, 'price_paid': 60, 'num_bidders': 6, 'auction_type': 'vickrey', 'total_rounds': 1}
-[0023] ⚠️ V10 → CONFLICT ZONE (urg=8) | {'vehicle_id': 10, 'direction': 'E', 'urgency': 8}
-[0024] ✅ V10 ← conflict zone | {'vehicle_id': 10, 'direction': 'E'}
-[0025] 🚗 V11 spawned (E, urg=1) | {'vehicle_id': 11, 'direction': 'E', 'urgency': 1}
-[0025] ➡️ V11 → BARRIER (E) | {'vehicle_id': 11, 'direction': 'E'}
-[0025] 🔨 AUCTION (VICKREY) conflict: V10 WINS (bid=80, paid=70, rounds=1) | V10(b=80), V4(b=70) | {'axis': 'conflict', 'winner_id': 10, 'winning_bid': 80, 'price_paid': 70, 'num_bidders': 2, 'auction_type': 'vickrey', 'total_rounds': 1}
-[0025] ⚠️ V10 → CONFLICT ZONE (urg=8) | {'vehicle_id': 10, 'direction': 'E', 'urgency': 8}
-[0026] 🚗 V12 spawned (W, urg=2) | {'vehicle_id': 12, 'direction': 'W', 'urgency': 2}
-[0026] ➡️ V12 → BARRIER (W) | {'vehicle_id': 12, 'direction': 'W'}
-[0028] 🚗 V13 spawned (N, urg=9) | {'vehicle_id': 13, 'direction': 'N', 'urgency': 9}
-[0028] ➡️ V13 → BARRIER (N) | {'vehicle_id': 13, 'direction': 'N'}
+[0023] ➡️ V7 → North-South corridor (Auction (Vickrey)) | {'vehicle_id': 7, 'direction': 'N', 'axis': 'North-South', 'mechanism': 'Auction (Vickrey)'}
+[0023] 🔨 AUCTION (VICKREY) North-South: V7 WINS (bid=1009, paid=80, rounds=1) | V7(b=1009), V11(b=80), V4(b=70), V5(b=60), V6(b=50), V2(b=10) | {'axis': 'North-South', 'winner_id': 7, 'winning_bid': 1009, 'price_paid': 80, 'num_bidders': 6, 'auction_type': 'vickrey', 'total_rounds': 1}
+[0024] ➡️ V9 → BARRIER (N) | {'vehicle_id': 9, 'direction': 'N'}
+[0025] 🚗 V12 spawned (S, urg=1) | {'vehicle_id': 12, 'direction': 'S', 'urgency': 1}
+[0025] ⚠️ V7 → CONFLICT ZONE (urg=9) | {'vehicle_id': 7, 'direction': 'N', 'urgency': 9}
+[0026] 🚗 V13 spawned (E, urg=2) | {'vehicle_id': 13, 'direction': 'E', 'urgency': 2}
+[0026] ➡️ V13 → BARRIER (E) | {'vehicle_id': 13, 'direction': 'E'}
+[0026] ➡️ V13 → East-West corridor (Auction (Vickrey)) | {'vehicle_id': 13, 'direction': 'E', 'axis': 'East-West', 'mechanism': 'Auction (Vickrey)'}
+[0026] ✅ V7 ← conflict zone | {'vehicle_id': 7, 'direction': 'N'}
+[0027] 🚗 V14 spawned (E, urg=9) | {'vehicle_id': 14, 'direction': 'E', 'urgency': 9}
+[0027] ➡️ V14 → BARRIER (E) | {'vehicle_id': 14, 'direction': 'E'}
+[0028] ⚠️ V13 → CONFLICT ZONE (urg=2) | {'vehicle_id': 13, 'direction': 'E', 'urgency': 2}
+[0029] ✅ V13 ← conflict zone | {'vehicle_id': 13, 'direction': 'E'}
 
 --- STEP 30 ---
-[0031] 🚗 V14 spawned (S, urg=6) | {'vehicle_id': 14, 'direction': 'S', 'urgency': 6}
-[0031] 🏁 V10 EXITED (total=10, wait=0) | {'vehicle_id': 10, 'direction': 'E', 'total_time': 10, 'wait_time': 0}
-[0031] ⚠️ V4 → CONFLICT ZONE (urg=7) | {'vehicle_id': 4, 'direction': 'N', 'urgency': 7}
-[0032] 🚗 V15 spawned (S, urg=4) | {'vehicle_id': 15, 'direction': 'S', 'urgency': 4}
-[0032] ➡️ V12 → East-West corridor (Auction (Vickrey)) | {'vehicle_id': 12, 'direction': 'W', 'axis': 'East-West', 'mechanism': 'Auction (Vickrey)'}
-[0032] 🔨 AUCTION (VICKREY) East-West: V12 WINS (bid=20, paid=10, rounds=1) | V12(b=20), V11(b=10) | {'axis': 'East-West', 'winner_id': 12, 'winning_bid': 20, 'price_paid': 10, 'num_bidders': 2, 'auction_type': 'vickrey', 'total_rounds': 1}
-[0032] ✅ V4 ← conflict zone | {'vehicle_id': 4, 'direction': 'N'}
-[0033] 🚗 V16 spawned (N, urg=8) | {'vehicle_id': 16, 'direction': 'N', 'urgency': 8}
-[0033] ⚠️ V4 → CONFLICT ZONE (urg=7) | {'vehicle_id': 4, 'direction': 'N', 'urgency': 7}
-[0035] 🚗 V17 spawned (N, urg=7) | {'vehicle_id': 17, 'direction': 'N', 'urgency': 7}
-[0036] 🚗 V18 spawned (S, urg=6) | {'vehicle_id': 18, 'direction': 'S', 'urgency': 6}
+[0030] 🚗 V15 spawned (W, urg=6) | {'vehicle_id': 15, 'direction': 'W', 'urgency': 6}
+[0030] ➡️ V15 → BARRIER (W) | {'vehicle_id': 15, 'direction': 'W'}
+[0031] 🚗 V16 spawned (W, urg=4) | {'vehicle_id': 16, 'direction': 'W', 'urgency': 4}
+[0031] ➡️ V16 → BARRIER (W) | {'vehicle_id': 16, 'direction': 'W'}
+[0032] 🚗 V17 spawned (E, urg=8) | {'vehicle_id': 17, 'direction': 'E', 'urgency': 8}
+[0032] ➡️ V17 → BARRIER (E) | {'vehicle_id': 17, 'direction': 'E'}
+[0033] 🏁 V7 EXITED (total=22, wait=12) | {'vehicle_id': 7, 'direction': 'N', 'total_time': 22, 'wait_time': 12}
+[0034] 🚗 V18 spawned (E, urg=6) | {'vehicle_id': 18, 'direction': 'E', 'urgency': 6}
+[0034] ➡️ V18 → BARRIER (E) | {'vehicle_id': 18, 'direction': 'E'}
+[0034] ➡️ V9 → North-South corridor (Auction (Vickrey)) | {'vehicle_id': 9, 'direction': 'N', 'axis': 'North-South', 'mechanism': 'Auction (Vickrey)'}
+[0034] 🔨 AUCTION (VICKREY) North-South: V9 WINS (bid=1010, paid=80, rounds=1) | V9(b=1010), V11(b=80), V4(b=70), V5(b=60), V6(b=50), V2(b=10) | {'axis': 'North-South', 'winner_id': 9, 'winning_bid': 1010, 'price_paid': 80, 'num_bidders': 6, 'auction_type': 'vickrey', 'total_rounds': 1}
+[0035] 🚗 V19 spawned (S, urg=2) | {'vehicle_id': 19, 'direction': 'S', 'urgency': 2}
+[0035] ➡️ V8 → BARRIER (N) | {'vehicle_id': 8, 'direction': 'N'}
+[0036] 🏁 V13 EXITED (total=10, wait=0) | {'vehicle_id': 13, 'direction': 'E', 'total_time': 10, 'wait_time': 0}
+[0036] ⚠️ V9 → CONFLICT ZONE (urg=10) | {'vehicle_id': 9, 'direction': 'N', 'urgency': 10}
+[0037] ➡️ V14 → East-West corridor (Auction (Vickrey)) | {'vehicle_id': 14, 'direction': 'E', 'axis': 'East-West', 'mechanism': 'Auction (Vickrey)'}
+[0037] 🔨 AUCTION (VICKREY) East-West: V14 WINS (bid=1009, paid=80, rounds=1) | V14(b=1009), V17(b=80), V18(b=60), V15(b=60), V16(b=40) | {'axis': 'East-West', 'winner_id': 14, 'winning_bid': 1009, 'price_paid': 80, 'num_bidders': 5, 'auction_type': 'vickrey', 'total_rounds': 1}
+[0037] ✅ V9 ← conflict zone | {'vehicle_id': 9, 'direction': 'N'}
+[0038] 🚗 V20 spawned (W, urg=1) | {'vehicle_id': 20, 'direction': 'W', 'urgency': 1}
+[0038] ➡️ V20 → BARRIER (W) | {'vehicle_id': 20, 'direction': 'W'}
+[0039] ⚠️ V14 → CONFLICT ZONE (urg=9) | {'vehicle_id': 14, 'direction': 'E', 'urgency': 9}
+
+--- STEP 40 ---
+[0040] 🚗 V21 spawned (E, urg=7) | {'vehicle_id': 21, 'direction': 'E', 'urgency': 7}
+[0040] ➡️ V21 → BARRIER (E) | {'vehicle_id': 21, 'direction': 'E'}
+[0040] ✅ V14 ← conflict zone | {'vehicle_id': 14, 'direction': 'E'}
+[0043] 🚗 V22 spawned (S, urg=1) | {'vehicle_id': 22, 'direction': 'S', 'urgency': 1}
+[0043] 🚗 V23 spawned (E, urg=9) | {'vehicle_id': 23, 'direction': 'E', 'urgency': 9}
+[0044] 🚗 V24 spawned (S, urg=10) | {'vehicle_id': 24, 'direction': 'S', 'urgency': 10}
+[0044] 🏁 V9 EXITED (total=26, wait=16) | {'vehicle_id': 9, 'direction': 'N', 'total_time': 26, 'wait_time': 16}
+[0045] 🚗 V25 spawned (N, urg=4) | {'vehicle_id': 25, 'direction': 'N', 'urgency': 4}
+[0045] ➡️ V11 → North-South corridor (Auction (Vickrey)) | {'vehicle_id': 11, 'direction': 'S', 'axis': 'North-South', 'mechanism': 'Auction (Vickrey)'}
+[0045] 🔨 AUCTION (VICKREY) North-South: V11 WINS (bid=80, paid=70, rounds=1) | V11(b=80), V4(b=70), V5(b=60), V8(b=60), V6(b=50), V2(b=10) | {'axis': 'North-South', 'winner_id': 11, 'winning_bid': 80, 'price_paid': 70, 'num_bidders': 6, 'auction_type': 'vickrey', 'total_rounds': 1}
+[0046] ➡️ V24 → BARRIER (S) | {'vehicle_id': 24, 'direction': 'S'}
+[0047] 🏁 V14 EXITED (total=20, wait=10) | {'vehicle_id': 14, 'direction': 'E', 'total_time': 20, 'wait_time': 10}
+[0047] ⚠️ V11 → CONFLICT ZONE (urg=8) | {'vehicle_id': 11, 'direction': 'S', 'urgency': 8}
+[0048] 🚗 V26 spawned (E, urg=10) | {'vehicle_id': 26, 'direction': 'E', 'urgency': 10}
+[0048] 🚗 V27 spawned (W, urg=5) | {'vehicle_id': 27, 'direction': 'W', 'urgency': 5}
+[0048] ➡️ V17 → East-West corridor (Auction (Vickrey)) | {'vehicle_id': 17, 'direction': 'E', 'axis': 'East-West', 'mechanism': 'Auction (Vickrey)'}
+[0048] 🔨 AUCTION (VICKREY) East-West: V17 WINS (bid=80, paid=70, rounds=1) | V17(b=80), V21(b=70), V18(b=60), V15(b=60), V16(b=40), V20(b=10) | {'axis': 'East-West', 'winner_id': 17, 'winning_bid': 80, 'price_paid': 70, 'num_bidders': 6, 'auction_type': 'vickrey', 'total_rounds': 1}
+[0048] ✅ V11 ← conflict zone | {'vehicle_id': 11, 'direction': 'S'}
+[0049] 🚗 V28 spawned (S, urg=5) | {'vehicle_id': 28, 'direction': 'S', 'urgency': 5}
+[0049] ➡️ V26 → BARRIER (E) | {'vehicle_id': 26, 'direction': 'E'}
+
+--- STEP 50 ---
+[0050] ⚠️ V17 → CONFLICT ZONE (urg=8) | {'vehicle_id': 17, 'direction': 'E', 'urgency': 8}
+[0051] 🚗 V29 spawned (W, urg=5) | {'vehicle_id': 29, 'direction': 'W', 'urgency': 5}
+[0051] ✅ V17 ← conflict zone | {'vehicle_id': 17, 'direction': 'E'}
+[0054] 🚗 V30 spawned (W, urg=5) | {'vehicle_id': 30, 'direction': 'W', 'urgency': 5}
+[0055] 🚗 V31 spawned (N, urg=5) | {'vehicle_id': 31, 'direction': 'N', 'urgency': 5}
+[0055] 🏁 V11 EXITED (total=34, wait=24) | {'vehicle_id': 11, 'direction': 'S', 'total_time': 34, 'wait_time': 24}

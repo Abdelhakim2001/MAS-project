@@ -1,0 +1,20 @@
+CHIFFRES CLES POUR LA PRESENTATION
+==================================
+
+--- FCFS ---
+Passages totaux: 90
+Temps attente moy: 180.64 ticks
+Collisions évitées: 2
+
+--- AUCTION ---
+Passages totaux: 90
+Temps attente moy: 78.53 ticks
+Collisions évitées: 1
+Revenu total: 4880
+
+--- NEGOTIATION ---
+Passages totaux: 90
+Temps attente moy: 84.12 ticks
+Collisions évitées: 1
+Négociations tenues: 90
+

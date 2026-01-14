@@ -1,22 +1,9 @@
-"""
-FCFS (First-Come-First-Served) Mechanism
-=========================================
-
-Simple priority based on arrival order.
-No bidding, no urgency - pure fairness.
-
-Selection criteria:
-1. First by barrier_time (when vehicle reached barrier)
-2. Then by arrival_time (when vehicle was spawned)
-"""
 from typing import Optional, List, Dict, Any, TYPE_CHECKING
-
 from mechanisms.base import BaseMechanism, SelectionResult
 
 if TYPE_CHECKING:
     from vehicle import Vehicle
     from constants import CorridorAxis
-
 
 class FCFSMechanism(BaseMechanism):
     """
@@ -25,8 +12,7 @@ class FCFSMechanism(BaseMechanism):
     Priority is determined strictly by arrival order:
     - Primary: barrier_time (when the vehicle reached the barrier)
     - Secondary: arrival_time (when the vehicle was spawned)
-    
-    This ensures fairness - whoever arrived first gets to go first.
+    - Tertiary: vehicle_id (deterministic tie-breaker)
     """
     
     def __init__(self):
@@ -37,23 +23,14 @@ class FCFSMechanism(BaseMechanism):
                context: Dict[str, Any] = None) -> Optional[SelectionResult]:
         """
         Select winner by arrival order (first-come-first-served).
-        
-        Args:
-            candidates: Vehicles waiting at barrier
-            axis: Corridor axis (not used in FCFS)
-            context: Additional context (not used in FCFS)
-        
-        Returns:
-            SelectionResult with the earliest arriving vehicle
         """
         if not candidates:
             return None
         
-        # Sort by barrier_time, then arrival_time
-        # barrier_time may be None for vehicles not yet at barrier
+        # Correction: Ajout de v.id pour le départage (Tie-Breaker)
         sorted_candidates = sorted(
             candidates,
-            key=lambda v: (v.barrier_time or v.arrival_time, v.arrival_time)
+            key=lambda v: (v.barrier_time or v.arrival_time, v.arrival_time, v.id)
         )
         
         winner = sorted_candidates[0]
@@ -80,8 +57,9 @@ class FCFSMechanism(BaseMechanism):
         if len(waiting) == 1:
             return SelectionResult(winner=waiting[0], details={'method': 'single_vehicle'})
         
-        # Sort by entry_time (when vehicle entered corridor)
-        sorted_waiting = sorted(waiting, key=lambda v: v.entry_time or 0)
+        # Correction: Ajout de v.id pour le départage explicite
+        # Si entry_time est égal, le véhicule avec le plus petit ID gagne
+        sorted_waiting = sorted(waiting, key=lambda v: (v.entry_time or 0, v.id))
         winner = sorted_waiting[0]
         
         self.stats['conflict_selections'] += 1
