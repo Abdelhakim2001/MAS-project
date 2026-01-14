@@ -99,24 +99,25 @@ def reset_simulation():
     mech_map = {
         "FCFS": Mechanism.FCFS, 
         "AUCTION": Mechanism.AUCTION, 
-        "NEGOTIATION": Mechanism.NEGOTIATION
-    }
-    neg_map = {
-        "STOCHASTIC": NegotiationType.STOCHASTIC, 
-        "MARGINAL_UTILITY": NegotiationType.MARGINAL_UTILITY,
-        "TOKEN_BASED": NegotiationType.TOKEN_BASED
+        "NEGOTIATION": Mechanism.NEGOTIATION,
+        "CHICKEN": Mechanism.CHICKEN
     }
     
     current_mechanism = mech_map.get(mechanism_choice.value, Mechanism.FCFS)
-    current_negotiation_type = neg_map.get(negotiation_choice.value, NegotiationType.STOCHASTIC)
     
     model = SimpleIntersection(
         mechanism=current_mechanism,
-        negotiation_type=current_negotiation_type,
         spawn_rate=spawn_rate_value.value,
-        urgent_probability=0.1,
+        urgent_probability=0.15,
         seed=42
     )
+    
+    # Si c'est une enchère, configurer le type (English ou Vickrey)
+    if current_mechanism == Mechanism.AUCTION:
+        from mechanisms import AuctionType
+        auction_type = AuctionType.VICKREY if auction_type_choice.value == "VICKREY" else AuctionType.ENGLISH
+        model.mechanism.set_auction_type(auction_type)
+    
     tick.set(0)
 
 
@@ -349,23 +350,70 @@ def NegotiationPanel():
         return
     
     stats = model.get_stats()
+    neg_stats = model.get_negotiation_stats()
     last = model.get_last_negotiation()
     
-    with solara.Card("🤝 Negotiation", margin=2):
+    with solara.Card("🤝 Negotiation Details", margin=2):
         solara.Markdown(f"""
-**Method:** {stats.get('negotiation_method', 'N/A')}
-**Total:** {stats.get('negotiations_held', 0)}
+### Protocol Multi-Rounds
+
+| Stat | Value |
+|------|-------|
+| Négociations | **{neg_stats.get('negotiations_held', 0)}** |
+| Total rounds | {neg_stats.get('total_rounds', 0)} |
+| Avg rounds | {neg_stats.get('avg_rounds', 0):.1f} |
+| Messages | {neg_stats.get('total_messages', 0)} |
+| Yields | {neg_stats.get('yields', 0)} |
+| Close (<10%) | {neg_stats.get('close_negotiations', 0)} |
         """)
         
         if last:
+            winner_comp = last.get('winner_components', {})
+            loser_comp = last.get('loser_components', {})
+            
             solara.Markdown(f"""
 ---
-**Last Result:**
-- Winner: **V{last['winner_id']}**
-- Loser: V{last['loser_id']}
-- Via: {last['method']}
-- Rounds: {last['rounds']}
-            """)
+### Dernière Négociation
+
+**🏆 Gagnant: V{last['winner_id']}** (score={last.get('winner_score', 0):.1f})
+- Urgency: {winner_comp.get('urgency', '?')} → {winner_comp.get('urgency_score', 0):.1f} pts
+- Wait time: {winner_comp.get('wait_time', '?')} → {winner_comp.get('wait_score', 0):.1f} pts
+- Fuel: {winner_comp.get('fuel_level', '?')}% → {winner_comp.get('fuel_score', 0):.1f} pts
+
+**❌ Perdant: V{last['loser_id']}** (score={last.get('loser_score', 0):.1f})
+- Urgency: {loser_comp.get('urgency', '?')} → {loser_comp.get('urgency_score', 0):.1f} pts
+- Wait time: {loser_comp.get('wait_time', '?')} → {loser_comp.get('wait_score', 0):.1f} pts
+- Fuel: {loser_comp.get('fuel_level', '?')}% → {loser_comp.get('fuel_score', 0):.1f} pts
+
+**Rounds:** {last.get('total_rounds', 0)} | **Messages:** {last.get('total_messages', 0)}
+""")
+            
+            # Afficher les détails des rounds
+            rounds_detail = last.get('rounds_detail', [])
+            if rounds_detail:
+                rounds_text = ""
+                for r in rounds_detail:
+                    rounds_text += f"Round {r['round']}: {r['description']}\n"
+                
+                solara.Markdown(f"""
+---
+### Déroulement:
+```
+{rounds_text}```
+""")
+            
+            solara.Markdown("""
+---
+### Formule d'Utilité:
+```
+Score = 40% × Urgency + 
+        35% × Wait_Time + 
+        15% × Fuel_Urgency +
+        10% × Random
+```
+> Plus le score est haut, plus le véhicule est prioritaire.
+> L'**équité** (wait_time) équilibre l'**urgence**.
+""")
 
 
 @solara.component
@@ -378,21 +426,67 @@ def AuctionPanel():
     stats = model.get_stats()
     last = model.get_last_auction()
     
-    with solara.Card("🔨 Auction", margin=2):
+    with solara.Card("🔨 Auction Details", margin=2):
+        # Déterminer le type d'enchère
+        auction_type = "Vickrey"  # Par défaut
+        if last and 'type' in last:
+            auction_type = last['type'].title()
+        
         solara.Markdown(f"""
-- Auctions: **{stats.get('auctions_held', 0)}**
-- Revenue: **{stats.get('total_revenue', 0)}**
-- Avg Price: {stats.get('avg_price', 0):.1f}
+### Type: **{auction_type}**
+
+| Stat | Value |
+|------|-------|
+| Enchères | **{stats.get('auctions_held', 0)}** |
+| Revenue | **{stats.get('total_revenue', 0)}** |
+| Prix moyen | {stats.get('avg_price', 0):.1f} |
         """)
         
         if last:
-            urg = " 🚨" if last.get('is_urgent') else ""
+            urg = " 🚨" if last.get('winning_bid', 0) >= 1000 else ""
+            
+            # Afficher tous les bids
+            all_bids = last.get('all_bids', {})
+            bids_sorted = sorted(all_bids.items(), key=lambda x: x[1], reverse=True)
+            
+            bids_display = ""
+            for i, (vid, bid) in enumerate(bids_sorted):
+                marker = "🏆" if i == 0 else "  "
+                bids_display += f"{marker} V{vid}: {bid}\n"
+            
             solara.Markdown(f"""
 ---
-**Last Winner:** V{last['winner_id']}{urg}
-Bid: {last['winning_bid']} | Paid: {last['price_paid']}
-            """)
+### Dernière Enchère{urg}
 
+**Gagnant:** V{last['winner_id']}
+- Bid: **{last['winning_bid']}**
+- Prix payé: **{last['price_paid']}**
+- Rounds: {last.get('total_rounds', 1)}
+
+**Tous les bids:**
+```
+{bids_display}```
+
+**Explication:**
+""")
+            # Explication selon le type
+            if auction_type.lower() == 'vickrey':
+                solara.Markdown(f"""
+> **Vickrey**: Le gagnant (V{last['winner_id']}) 
+> a le bid le plus haut ({last['winning_bid']})
+> mais paie seulement le **2ème prix** ({last['price_paid']})
+> 
+> ✅ Stratégie optimale = dire sa vraie valeur
+""")
+            else:
+                solara.Markdown(f"""
+> **English**: Prix ascendant par rounds.
+> Le gagnant (V{last['winner_id']}) est le dernier
+> à rester et paie le prix final ({last['price_paid']})
+""")
+
+
+auction_type_choice = solara.reactive("VICKREY")
 
 @solara.component
 def ControlPanel():
@@ -411,17 +505,36 @@ def ControlPanel():
         solara.Select(
             label="Mechanism",
             value=mechanism_choice,
-            values=["FCFS", "AUCTION", "NEGOTIATION"],
+            values=["FCFS", "AUCTION", "NEGOTIATION", "CHICKEN"],
             on_value=lambda v: mechanism_choice.set(v)
         )
         
-        if mechanism_choice.value == "NEGOTIATION":
+        if mechanism_choice.value == "AUCTION":
             solara.Select(
-                label="Negotiation Type",
-                value=negotiation_choice,
-                values=["STOCHASTIC", "MARGINAL_UTILITY", "TOKEN_BASED"],
-                on_value=lambda v: negotiation_choice.set(v)
+                label="Auction Type",
+                value=auction_type_choice,
+                values=["VICKREY", "ENGLISH"],
+                on_value=lambda v: auction_type_choice.set(v)
             )
+            solara.Markdown(f"""
+*Type: **{auction_type_choice.value}***
+- Vickrey: 1 round, paie 2ème prix
+- English: Multi-rounds, prix ascendant
+            """)
+        
+        if mechanism_choice.value == "NEGOTIATION":
+            solara.Markdown("""
+*Multi-Round Protocol*
+- 4 rounds de communication
+- Équilibre urgence/équité
+            """)
+        
+        if mechanism_choice.value == "CHICKEN":
+            solara.Markdown("""
+*🐔 Chicken Game (Game Theory)*
+- Chaque véhicule: GO ou YIELD
+- Nash Equilibria: (Go,Yield), (Yield,Go)
+            """)
         
         solara.Markdown("*Click Reset to apply changes*")
         
@@ -433,37 +546,156 @@ def ControlPanel():
 def InfoPanel():
     _ = tick.value
     
-    with solara.Card("ℹ️ Info", margin=2):
+    with solara.Card("ℹ️ Comment ça marche?", margin=2):
         if model.mechanism_type == Mechanism.NEGOTIATION:
             solara.Markdown(f"""
-**NEGOTIATION Mode**
+### 🤝 NÉGOCIATION
 
-When 2+ vehicles meet:
-1. They WAIT before intersection
-2. NEGOTIATE to decide priority
-3. Winner passes, loser waits
+**Quand 2+ véhicules se rencontrent:**
 
-**Type:** {negotiation_choice.value}
+1️⃣ **ANNOUNCE** - Chaque véhicule annonce son intention
+
+2️⃣ **PROPOSE** - Échange des scores de priorité
+
+3️⃣ **COUNTER** - Si scores proches (<10%), contre-propositions avec bonus équité
+
+4️⃣ **DECIDE** - Le perdant cède (YIELD), le gagnant avance (ACCEPT)
+
+**Critères de priorité:**
+- 🚨 Urgence (40%)
+- ⏱️ Temps d'attente (35%) 
+- ⛽ Carburant (15%)
+- 🎲 Aléatoire (10%)
             """)
         elif model.mechanism_type == Mechanism.AUCTION:
             solara.Markdown("""
-**AUCTION Mode** (Vickrey)
+### 🔨 ENCHÈRES
 
-Priority = Highest Bid
-- Normal: urgency × 10
-- URGENT: 1000+
+**Type actuel: Vickrey (2nd Prix)**
 
-Winner pays 2nd highest bid.
+**Comment ça fonctionne:**
+1. Chaque véhicule soumet son bid (scellé)
+2. **Le plus haut bid gagne**
+3. **Le gagnant paie le 2ème prix!**
+
+**Exemple:**
+```
+V1 bid=30, V2 bid=80, V3 bid=50
+→ V2 GAGNE (bid=80)
+→ V2 PAIE 50 (2ème prix)
+```
+
+**Pourquoi Vickrey?**
+> Stratégie optimale = dire sa **vraie valeur**
+> Car le prix payé dépend des AUTRES, pas de vous!
+
+**Calcul du bid:**
+- Normal: `urgency × 10`
+- Urgent (≥9): `1000 + urgency`
+            """)
+        elif model.mechanism_type == Mechanism.CHICKEN:
+            solara.Markdown("""
+### 🐔 CHICKEN GAME
+
+**Jeu de théorie des jeux (anti-coordination)**
+
+**Matrice de payoffs:**
+```
+              B: Yield    B: Go
+A: Yield       (1,1)      (0,3)
+A: Go          (3,0)    (-10,-10)
+```
+
+**Équilibres de Nash:**
+- (Go, Yield) - A passe
+- (Yield, Go) - B passe
+- Mixte: p(Go) = 1/6
+
+**Stratégies:**
+- 🔴 Aggressive: Toujours GO
+- 🟢 Cooperative: Toujours YIELD
+- 🟡 Rational: Basé sur utilité espérée
+
+**Propriétés:**
+- ❌ Pas de stratégie dominante
+- ✅ Anti-coordination game
+- ⚠️ (Go,Go) = Collision!
             """)
         else:
             solara.Markdown("""
-**FCFS Mode**
+### 📋 FCFS (Premier Arrivé)
 
-Priority = First Arrived
+**Le plus simple:**
+1. Les véhicules arrivent à la barrière
+2. Le **premier arrivé** passe en premier
+3. Pas d'urgence, pas d'enchères
 
-No bidding, no urgency.
-Pure fairness.
+**Avantages:**
+- ✅ Parfaitement équitable
+- ✅ Simple à comprendre
+
+**Inconvénients:**
+- ❌ Ignore l'urgence
+- ❌ Une ambulance attend comme les autres
             """)
+
+
+@solara.component
+def ChickenPanel():
+    """Panneau d'affichage pour le Chicken Game"""
+    _ = tick.value
+    
+    if model.mechanism_type != Mechanism.CHICKEN:
+        return
+    
+    stats = model.get_stats()
+    
+    # Récupérer les stats du mécanisme
+    mech_stats = {}
+    if hasattr(model.mechanism, 'stats'):
+        mech_stats = model.mechanism.stats
+    
+    with solara.Card("🐔 Chicken Game", margin=2):
+        solara.Markdown(f"""
+### Game Theory Stats
+
+| Stat | Value |
+|------|-------|
+| Games Played | **{mech_stats.get('games_played', 0)}** |
+| Clean Passes | {mech_stats.get('clean_passes', 0)} |
+| Deadlocks | {mech_stats.get('deadlocks', 0)} |
+| Near Misses | {mech_stats.get('near_misses', 0)} |
+        """)
+        
+        # Calculer pourcentages
+        total_actions = mech_stats.get('go_count', 0) + mech_stats.get('yield_count', 0)
+        if total_actions > 0:
+            go_pct = mech_stats.get('go_count', 0) / total_actions * 100
+            yield_pct = mech_stats.get('yield_count', 0) / total_actions * 100
+            solara.Markdown(f"""
+**Actions:**
+- GO: {mech_stats.get('go_count', 0)} ({go_pct:.1f}%)
+- YIELD: {mech_stats.get('yield_count', 0)} ({yield_pct:.1f}%)
+            """)
+        
+        # Dernier jeu
+        if hasattr(model.mechanism, 'get_last_game'):
+            last = model.mechanism.get_last_game()
+            if last:
+                outcome_emoji = "💥" if last['outcome_type'] == 'collision' else "⏳" if last['outcome_type'] == 'deadlock' else "✅"
+                solara.Markdown(f"""
+---
+### Dernier Jeu {outcome_emoji}
+
+**V{last['player_a']}** vs **V{last['player_b']}**
+
+| Player | Action | Payoff |
+|--------|--------|--------|
+| V{last['player_a']} | {last['action_a'].upper()} | {last['payoff_a']} |
+| V{last['player_b']} | {last['action_b'].upper()} | {last['payoff_b']} |
+
+**Gagnant:** V{last['winner']}
+                """)
 
 
 # =============================================================================
@@ -487,8 +719,11 @@ def Page():
                 AuctionPanel()
             if model.mechanism_type == Mechanism.NEGOTIATION:
                 NegotiationPanel()
+            if model.mechanism_type == Mechanism.CHICKEN:
+                ChickenPanel()
             InfoPanel()
 
 
-# Entry point
-app = Page
+# Make sure Page is the entry point for Solara
+# Both 'Page' and 'app' should work
+__all__ = ['Page']

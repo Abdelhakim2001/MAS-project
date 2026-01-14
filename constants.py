@@ -69,6 +69,7 @@ class Mechanism(Enum):
     FCFS = "First-Come-First-Served"
     AUCTION = "Auction (Vickrey)"
     NEGOTIATION = "Multi-Agent Negotiation"
+    CHICKEN = "Chicken Game (Game Theory)"
 
 
 class VehicleType(Enum):

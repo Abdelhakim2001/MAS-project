@@ -157,25 +157,66 @@ class DebugLogger:
     
     def log_auction(self, axis: str, winner_id: int, winner_urgency: int, 
                     winning_bid: int, price_paid: int, num_bidders: int, 
-                    all_bids: List):
-        bids_str = ", ".join([f"V{v_id}(u={u},b={b})" for v_id, u, b in all_bids])
+                    all_bids, auction_type: str = 'vickrey', total_rounds: int = 1):
+        # all_bids est maintenant un dict {vehicle_id: bid}
+        if isinstance(all_bids, dict):
+            bids_str = ", ".join([f"V{vid}(b={bid})" for vid, bid in sorted(all_bids.items(), key=lambda x: x[1], reverse=True)])
+        else:
+            bids_str = str(all_bids)
+        
         self.log('auction', 
-                f"AUCTION {axis}: V{winner_id} WINS (bid={winning_bid}, paid={price_paid}) | {bids_str}", {
+                f"AUCTION ({auction_type.upper()}) {axis}: V{winner_id} WINS (bid={winning_bid}, paid={price_paid}, rounds={total_rounds}) | {bids_str}", {
             'axis': axis,
             'winner_id': winner_id,
             'winning_bid': winning_bid,
             'price_paid': price_paid,
             'num_bidders': num_bidders,
+            'auction_type': auction_type,
+            'total_rounds': total_rounds,
         })
     
     def log_negotiation(self, winner_id: int, loser_id: int, method: str, 
                         details: Dict = None):
-        self.log('negotiation', 
-                f"NEGOTIATION: V{winner_id} beats V{loser_id} via {method}", {
+        """Log une négociation avec détails des rounds"""
+        details = details or {}
+        
+        # Message de base
+        base_msg = f"NEGOTIATION V{winner_id} vs V{loser_id}:"
+        
+        # Construire le message détaillé
+        lines = [base_msg]
+        
+        # Afficher les scores
+        winner_score = details.get('winner_score', '?')
+        loser_score = details.get('loser_score', '?')
+        lines.append(f"       Scores: V{winner_id}={winner_score:.1f} vs V{loser_id}={loser_score:.1f}")
+        
+        # Afficher les composants du gagnant
+        winner_comp = details.get('winner_components', {})
+        if winner_comp:
+            lines.append(f"       V{winner_id}: urg={winner_comp.get('urgency', '?')}→{winner_comp.get('urgency_score', 0):.1f}pts, " +
+                        f"wait={winner_comp.get('wait_time', '?')}→{winner_comp.get('wait_score', 0):.1f}pts, " +
+                        f"fuel={winner_comp.get('fuel_level', '?')}%→{winner_comp.get('fuel_score', 0):.1f}pts")
+        
+        # Afficher les rounds
+        rounds_detail = details.get('rounds_detail', [])
+        if rounds_detail:
+            for r in rounds_detail:
+                lines.append(f"       Round {r['round']}: {r['description']}")
+        
+        # Résultat final
+        lines.append(f"       → V{loser_id} YIELD, V{winner_id} WINS")
+        
+        full_message = "\n".join(lines)
+        
+        self.log('negotiation', full_message, {
             'winner_id': winner_id,
             'loser_id': loser_id,
             'method': method,
-            'details': details,
+            'winner_score': winner_score,
+            'loser_score': loser_score,
+            'total_rounds': details.get('total_rounds', 0),
+            'total_messages': details.get('total_messages', 0),
         })
     
     def get_recent_logs(self, count: int = 20) -> List[Dict]:

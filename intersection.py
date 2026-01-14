@@ -193,15 +193,19 @@ class SimpleIntersection:
             )
             
             # Log mechanism-specific details
-            if hasattr(self.mechanism, 'get_last_auction') and result.details.get('method') == 'vickrey_auction':
-                details = result.details
-                logger.log_auction(
-                    axis.value, winner.id, winner.urgency,
-                    details.get('winning_bid', 0),
-                    details.get('price_paid', 0),
-                    details.get('num_bidders', 1),
-                    details.get('all_bids', [])
-                )
+            if hasattr(self.mechanism, 'get_last_auction'):
+                method = result.details.get('method', '')
+                if 'auction' in method:
+                    details = result.details
+                    logger.log_auction(
+                        axis.value, winner.id, winner.urgency,
+                        details.get('winning_bid', 0),
+                        details.get('price_paid', 0),
+                        len(details.get('all_bids', {})),
+                        details.get('all_bids', {}),
+                        auction_type=method.replace('_auction', ''),
+                        total_rounds=details.get('total_rounds', 1)
+                    )
             elif result.details.get('method') == 'negotiation':
                 neg_details = result.details.get('negotiation_details', {})
                 logger.log_negotiation(
@@ -231,9 +235,37 @@ class SimpleIntersection:
             result = self.mechanism.select_at_conflict(waiting, context)
             if result:
                 conflict_winner = result.winner
-                logger.log('negotiation', 
-                          f"CONFLICT: V{waiting[0].id} vs V{waiting[1].id} → V{conflict_winner.id} WINS",
-                          {'method': result.details.get('method', 'unknown')})
+                
+                # Log détaillé selon le mécanisme
+                method = result.details.get('method', 'unknown')
+                
+                if 'Marginal Utility' in method or 'negotiation' in method.lower():
+                    # Log détaillé pour négociation multi-rounds
+                    loser = waiting[1] if conflict_winner.id == waiting[0].id else waiting[0]
+                    logger.log_negotiation(
+                        winner_id=conflict_winner.id,
+                        loser_id=loser.id,
+                        method=method,
+                        details=result.details
+                    )
+                elif 'auction' in method.lower():
+                    # Log pour enchères
+                    logger.log_auction(
+                        axis='conflict',
+                        winner_id=conflict_winner.id,
+                        winner_urgency=conflict_winner.urgency,
+                        winning_bid=result.details.get('winning_bid', 0),
+                        price_paid=result.details.get('price_paid', 0),
+                        num_bidders=len(waiting),
+                        all_bids=result.details.get('all_bids', {}),
+                        auction_type=method.replace('_auction', ''),
+                        total_rounds=result.details.get('total_rounds', 1)
+                    )
+                else:
+                    # Log standard
+                    logger.log('negotiation', 
+                              f"CONFLICT: V{waiting[0].id} vs V{waiting[1].id} → V{conflict_winner.id} WINS",
+                              {'method': method})
         elif self.conflict_zone_vehicle is None and len(waiting) == 1:
             conflict_winner = waiting[0]
         
@@ -397,6 +429,12 @@ class SimpleIntersection:
             result['negotiations_held'] = mech_stats.get('negotiations_held', 0)
             result['total_revenue'] = mech_stats.get('total_revenue', 0)
             result['avg_price'] = mech_stats.get('avg_price', 0)
+            # Stats détaillées de négociation
+            result['total_rounds'] = mech_stats.get('total_rounds', 0)
+            result['avg_rounds'] = mech_stats.get('avg_rounds', 0)
+            result['total_messages'] = mech_stats.get('total_messages', 0)
+            result['yields'] = mech_stats.get('yields', 0)
+            result['close_negotiations'] = mech_stats.get('close_negotiations', 0)
         
         # For negotiation, add method
         if hasattr(self.mechanism, 'method'):
